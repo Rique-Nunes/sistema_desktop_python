@@ -22,22 +22,44 @@ class AbaPedidos(ttk.Frame):
         form.pack(fill="x")
 
         ttk.Label(form, text="Cliente:").grid(row=0, column=0, sticky="w", pady=4)
-        self.cmb_cliente = ttk.Combobox(form, width=30, state="readonly")
-        self.cmb_cliente.grid(row=0, column=1, padx=6, pady=4)
+        self.cmb_cliente = ttk.Combobox(form, width=28, state="readonly")
+        self.cmb_cliente.grid(row=0, column=1, padx=6, pady=4, sticky="w")
 
-        ttk.Label(form, text="Pagamento:").grid(row=0, column=2, sticky="w")
+        ttk.Label(form, text="Pagamento:").grid(row=0, column=2, sticky="w", padx=(10, 0))
         self.cmb_pag = ttk.Combobox(form, width=12, state="readonly", values=FORMAS_PAGAMENTO)
         self.cmb_pag.current(0)
-        self.cmb_pag.grid(row=0, column=3, padx=6, pady=4)
+        self.cmb_pag.grid(row=0, column=3, padx=6, pady=4, sticky="w")
 
-        ttk.Label(form, text="Status:").grid(row=1, column=0, sticky="w", pady=4)
-        self.cmb_status = ttk.Combobox(form, width=30, state="readonly", values=STATUS_PEDIDO)
+        ttk.Label(form, text="Status:").grid(row=0, column=4, sticky="w", padx=(10, 0))
+        self.cmb_status = ttk.Combobox(form, width=18, state="readonly", values=STATUS_PEDIDO)
         self.cmb_status.current(0)
-        self.cmb_status.grid(row=1, column=1, padx=6, pady=4)
+        self.cmb_status.grid(row=0, column=5, padx=6, pady=4, sticky="w")
 
-        ttk.Label(form, text="Endereco:").grid(row=1, column=2, sticky="w")
-        self.ent_end = ttk.Entry(form, width=30)
-        self.ent_end.grid(row=1, column=3, padx=6, pady=4)
+        # Linha 1 do Endereço
+        ttk.Label(form, text="CEP:").grid(row=1, column=0, sticky="w", pady=4)
+        self.ent_cep = ttk.Entry(form, width=15)
+        self.ent_cep.grid(row=1, column=1, padx=6, pady=4, sticky="w")
+
+        ttk.Label(form, text="Rua:").grid(row=1, column=2, sticky="w", padx=(10, 0))
+        self.ent_rua = ttk.Entry(form, width=32)
+        self.ent_rua.grid(row=1, column=3, padx=6, pady=4, sticky="w")
+
+        ttk.Label(form, text="Nº:").grid(row=1, column=4, sticky="w", padx=(10, 0))
+        self.ent_numero = ttk.Entry(form, width=8)
+        self.ent_numero.grid(row=1, column=5, padx=6, pady=4, sticky="w")
+
+        # Linha 2 do Endereço
+        ttk.Label(form, text="Complemento:").grid(row=2, column=0, sticky="w", pady=4)
+        self.ent_complemento = ttk.Entry(form, width=20)
+        self.ent_complemento.grid(row=2, column=1, padx=6, pady=4, sticky="w")
+
+        ttk.Label(form, text="Bairro:").grid(row=2, column=2, sticky="w", padx=(10, 0))
+        self.ent_bairro = ttk.Entry(form, width=20)
+        self.ent_bairro.grid(row=2, column=3, padx=6, pady=4, sticky="w")
+
+        ttk.Label(form, text="Cidade/UF:").grid(row=2, column=4, sticky="w", padx=(10, 0))
+        self.ent_cidade = ttk.Entry(form, width=20)
+        self.ent_cidade.grid(row=2, column=5, padx=6, pady=4, sticky="w")
 
         item_fr = ttk.LabelFrame(self, text="Itens do Pedido", padding=10)
         item_fr.pack(fill="x", pady=6)
@@ -72,9 +94,9 @@ class AbaPedidos(ttk.Frame):
         ttk.Button(botoes, text="Alterar Status", command=self.alterar_status).pack(
             side="left", padx=6
         )
-        ttk.Button(botoes, text="Remover Pedido", command=self.remover).pack(side="left")
+        ttk.Button(botoes, text="Remover (Permanente)", command=self.remover).pack(side="left")
         ttk.Button(botoes, text="Ver Itens", command=self.ver_itens).pack(side="left", padx=6)
-        ttk.Button(botoes, text="Novo", command=self.limpar).pack(side="left")
+        ttk.Button(botoes, text="Limpar Textos", command=self.limpar).pack(side="left")
 
         busca = ttk.Frame(self)
         busca.pack(fill="x", pady=(0, 6))
@@ -158,15 +180,76 @@ class AbaPedidos(ttk.Frame):
         if not sel:
             return
         vals = self.tree.item(sel[0])["values"]
-        self.id_selecionado = vals[0]
-        self.cmb_status.set(vals[4])
+        id_pedido = vals[0]
+        self.id_selecionado = id_pedido
+        
+        # Obter pedido detalhado do banco de dados para carregar todos os campos
+        pedido = pedido_dao.obter_por_id(id_pedido)
+        if pedido:
+            # Setar cliente
+            rotulo_cliente = f"{pedido['id_cliente']} - {pedido['cliente_nome']}"
+            self.cmb_cliente.set(rotulo_cliente)
+            
+            # Setar pagamento e status
+            self.cmb_pag.set(pedido['forma_pagamento'])
+            self.cmb_status.set(pedido['status_pedido'])
+            
+            # Limpar e setar campos de endereço
+            for e in (self.ent_cep, self.ent_rua, self.ent_numero, self.ent_complemento, self.ent_bairro, self.ent_cidade):
+                e.delete(0, "end")
+                
+            end_str = pedido['endereco_entrega'] or ""
+            partes = self.parse_endereco(end_str)
+            self.ent_cep.insert(0, partes["cep"])
+            self.ent_rua.insert(0, partes["rua"])
+            self.ent_numero.insert(0, partes["numero"])
+            self.ent_complemento.insert(0, partes["complemento"])
+            self.ent_bairro.insert(0, partes["bairro"])
+            self.ent_cidade.insert(0, partes["cidade"])
+            
+            # Carregar itens no carrinho
+            self.itens_carrinho = []
+            linhas = pedido_dao.listar_itens(id_pedido)
+            for l in linhas:
+                self.itens_carrinho.append((
+                    l["id_produto"], l["produto_nome"], l["quantidade"], l["preco_unitario"]
+                ))
+            self._render_itens()
+
+    def parse_endereco(self, end_str):
+        partes = {"rua": "", "numero": "", "complemento": "", "bairro": "", "cidade": "", "cep": ""}
+        if not end_str:
+            return partes
+        if " | " in end_str:
+            tokens = end_str.split(" | ")
+            for token in tokens:
+                if ":" in token:
+                    k, v = token.split(":", 1)
+                    k = k.strip().lower()
+                    v = v.strip()
+                    if "rua" in k:
+                        partes["rua"] = v
+                    elif "nº" in k or "num" in k:
+                        partes["numero"] = v
+                    elif "compl" in k:
+                        partes["complemento"] = v
+                    elif "bairro" in k:
+                        partes["bairro"] = v
+                    elif "cidade" in k:
+                        partes["cidade"] = v
+                    elif "cep" in k:
+                        partes["cep"] = v
+        else:
+            partes["rua"] = end_str
+        return partes
 
     def limpar(self):
         self.id_selecionado = None
         self.cmb_cliente.set("")
         self.cmb_pag.current(0)
         self.cmb_status.current(0)
-        self.ent_end.delete(0, "end")
+        for e in (self.ent_cep, self.ent_rua, self.ent_numero, self.ent_complemento, self.ent_bairro, self.ent_cidade):
+            e.delete(0, "end")
         self.limpar_itens()
         self.tree.selection_remove(self.tree.selection())
 
@@ -179,10 +262,20 @@ class AbaPedidos(ttk.Frame):
             messagebox.showwarning("Atencao", "Adicione ao menos um item ao pedido.")
             return
         id_cliente = self.mapa_clientes[rotulo]
+        
+        cep = self.ent_cep.get().strip()
+        rua = self.ent_rua.get().strip()
+        num = self.ent_numero.get().strip()
+        compl = self.ent_complemento.get().strip()
+        bairro = self.ent_bairro.get().strip()
+        cidade = self.ent_cidade.get().strip()
+        
+        endereco_completo = f"Rua: {rua} | Nº: {num} | Compl: {compl} | Bairro: {bairro} | Cidade: {cidade} | CEP: {cep}"
+        
         itens = [(idp, qtd, preco) for (idp, _, qtd, preco) in self.itens_carrinho]
         pedido_dao.incluir(
             id_cliente, self.cmb_pag.get(), self.cmb_status.get(),
-            self.ent_end.get().strip(), itens,
+            endereco_completo, itens,
         )
         self.limpar()
         self.atualizar_lista()
@@ -200,10 +293,11 @@ class AbaPedidos(ttk.Frame):
         if not self.id_selecionado:
             messagebox.showwarning("Atencao", "Selecione um pedido na lista.")
             return
-        if messagebox.askyesno("Confirmar", "Deseja remover este pedido?"):
+        if messagebox.askyesno("Confirmar", "Deseja remover este pedido permanentemente do banco de dados?"):
             pedido_dao.remover(self.id_selecionado)
             self.limpar()
             self.atualizar_lista()
+            messagebox.showinfo("Sucesso", "Pedido removido com sucesso.")
 
     def ver_itens(self):
         if not self.id_selecionado:

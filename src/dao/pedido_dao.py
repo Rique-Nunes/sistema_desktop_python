@@ -71,3 +71,17 @@ def remover(id_pedido):
     con.execute("DELETE FROM pedido WHERE id_pedido = ?", (id_pedido,))
     con.commit()
     con.close()
+
+
+def obter_por_id(id_pedido):
+    con = conectar()
+    dado = con.execute(
+        """SELECT pe.*, c.nome AS cliente_nome
+           FROM pedido pe
+           JOIN cliente c ON c.id_cliente = pe.id_cliente
+           WHERE pe.id_pedido = ?""",
+        (id_pedido,),
+    ).fetchone()
+    con.close()
+    return dado
+

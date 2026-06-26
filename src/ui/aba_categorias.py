@@ -29,8 +29,8 @@ class AbaCategorias(ttk.Frame):
         botoes.pack(fill="x", pady=8)
         ttk.Button(botoes, text="Incluir", command=self.incluir).pack(side="left")
         ttk.Button(botoes, text="Alterar", command=self.alterar).pack(side="left", padx=6)
-        ttk.Button(botoes, text="Remover", command=self.remover).pack(side="left")
-        ttk.Button(botoes, text="Limpar", command=self.limpar).pack(side="left", padx=6)
+        ttk.Button(botoes, text="Remover (Permanente)", command=self.remover).pack(side="left")
+        ttk.Button(botoes, text="Limpar Textos", command=self.limpar).pack(side="left", padx=6)
 
         busca = ttk.Frame(self)
         busca.pack(fill="x", pady=(0, 6))
